@@ -106,3 +106,29 @@ def test_explicit_dict_type_rejects_string():
     assert isinstance(param_type, click.types.FuncParamType)
     with pytest.raises(click.BadParameter):
         param_type.convert("abc", None, None)
+
+
+@pytest.mark.parametrize(
+    "param_type",
+    [click.INT, click.FLOAT, click.IntRange(0, 10), click.FloatRange(0.0, 10.0)],
+)
+@pytest.mark.parametrize("value", [None, [1], object()])
+def test_number_type_rejects_non_numeric_types(param_type, value):
+    """int()/float() raise TypeError for non-numeric types; these must be
+    converted to BadParameter rather than leaking.
+
+    Refs: https://github.com/pallets/click/issues/3904
+    """
+    with pytest.raises(click.BadParameter):
+        param_type.convert(value, None, None)
+
+
+@pytest.mark.parametrize("param_type", [click.FLOAT, click.FloatRange(0.0, 10.0)])
+def test_number_type_rejects_overflow(param_type):
+    """float() overflows for very large integers; overflow must be reported
+    as BadParameter rather than leaking OverflowError.
+
+    Refs: https://github.com/pallets/click/issues/3904
+    """
+    with pytest.raises(click.BadParameter):
+        param_type.convert(10**1000, None, None)
